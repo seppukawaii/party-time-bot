@@ -24,7 +24,7 @@ class BaseGame {
             });
 
             this.db.runQuery(query, (err, entities, info) => {
-                if (err || entities.length == 0 || entities[0].state == 'done')) {
+                if (err || entities.length == 0 || entities[0].state == 'done') {
                     this[req.data.name]();
                 } else {
                     req.entity = entities[0];
