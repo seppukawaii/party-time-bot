@@ -1,0 +1,7 @@
+indexes:
+
+- kind: Game
+  properties:
+  - name: channel
+  - name: createdAt
+    direction: desc

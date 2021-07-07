@@ -1,14 +1,17 @@
 {
-  "name": "partybot",
+  "name": "partytime",
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
   "scripts": {
-    "deploy" : "node commands.js && gcloud functions deploy partytime"
+    "deploy": "npm run deploy-function && npm run deploy-webhook",
+    "deploy-function": "gcloud functions deploy $npm_package_name --trigger-http --security-level=secure-always --runtime=nodejs14 --env-vars-file=secrets/function.yaml",
+    "deploy-webhook": "callbackURL=$(gcloud functions describe $npm_package_name --format='get(httpsTrigger.url)') node webhook.js"
   },
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@google-cloud/datastore": "^6.4.0",
     "axios": "^0.21.1",
     "d20": "^1.4.1",
     "discord.js": "^12.5.3",
