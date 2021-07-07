@@ -24,7 +24,7 @@ class BaseGame {
             });
 
             this.db.runQuery(query, (err, entities, info) => {
-                if (err || entities.length == 0 || this.gameIsExpired(entities[0].createdAt)) {
+                if (err || entities.length == 0 || entities[0].state == 'done')) {
                     this[req.data.name]();
                 } else {
                     req.entity = entities[0];
@@ -37,15 +37,6 @@ class BaseGame {
             this.entity = req.entity;
             this[req.data.name]();
         }
-    }
-
-    gameIsExpired(timestamp) {
-        var rightNow = new Date();
-        var milliseconds = rightNow - new Date(timestamp);
-        var seconds = milliseconds / 1000;
-        var minutes = Math.floor(seconds / 60);
-
-        return minutes >= 15;
     }
 
     setup() {
