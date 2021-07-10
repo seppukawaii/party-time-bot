@@ -53,7 +53,10 @@ exports.partytime = (req, res) => {
             try {
                 if (/Discord\-Interactions\/[\d\.]+ \(\+https:\/\/discord.com\)/.test(req.get('user-agent'))) {
                     res.status(200).json({
-                        type: 5
+                        type: 5,
+                        data: {
+                            flags: 64
+                        }
                     });
                     axios({
                         url: `https://${req.headers.host}/partytime`,

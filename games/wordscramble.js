@@ -35,7 +35,7 @@ class Game extends BaseGame {
     }
 
     startGame() {
-        this.helpers.respond({
+        this.helpers.sendMessage({
             "content": "The game is now starting!  There will be five rounds of escalating difficulty (currently this is a lie).  Use **/guess (answer)** to submit your best guess, or **/pass** if you give up!!"
         }, () => {
             this.startRound();
@@ -51,20 +51,20 @@ class Game extends BaseGame {
         this.entity.rounds.push({
             "word": word,
             "scrambled": scrambledWord,
-		"start" : new Date().toISOString()
+            "start": new Date().toISOString()
         });
 
         this.helpers.saveData([{
             key: this.entity[this.db.KEY],
             data: this.entity
         }], () => {
-		var message = "";
+            var message = "";
 
-		if (this.entity.rounds.length > 1) {
-			var message = `The answer I wanted was: **${this.currentRound.word}**\r\n\r\n`;
-		}
+            if (this.entity.rounds.length > 1) {
+                var message = `The answer I wanted was: **${this.currentRound.word}**\r\n\r\n`;
+            }
 
-		message += `Round #${this.entity.rounds.length} : **${scrambledWord}**`;
+            message += `Round #${this.entity.rounds.length} : **${scrambledWord}**`;
 
             this.helpers.sendMessage({
                 "content": message
@@ -76,33 +76,46 @@ class Game extends BaseGame {
         if (this.gameStarted() && this.playerJoined()) {
             if (this.currentRound.players[this.player]) {
                 this.helpers.respond({
-                    "content": this.currentRound.players[this.player] == 'x' ? "You already passed this round!" : "You already guessed correctly this round!",
-                    "flags": 64
+                    "content": this.currentRound.players[this.player] == 'x' ? "You already passed this round!" : "You already guessed correctly this round!"
                 });
             } else {
-                if (this.options.guess.toLowerCase().trim() == this.currentRound.word) {
-                    this.playerEntity[`round_${this.currentRound.num}`] = new Date().toISOString();
-                    this.helpers.saveData([{
-                        key: this.playerEntity[this.db.KEY],
-                        data: this.playerEntity
-                    }], () => {
-                        this.helpers.respond({
-                            "content": `<@${this.player}> guessed correctly!`
-                        }, () => {
-                            this.finishRound();
+		var guess = this.options.guess.toLowerCase().trim();
+		    this.helpers.respond({
+			    "content" : `Submitting **${quess}**...`
+		    }, () => {
+                      if (guess == this.currentRound.word) {
+                        this.playerEntity[`round_${this.currentRound.num}`] = new Date().toISOString();
+                        this.helpers.saveData([{
+                            key: this.playerEntity[this.db.KEY],
+                            data: this.playerEntity
+                        }], () => {
+                            this.helpres
+                            this.helpers.sendMessage({
+                                "content": `<@${this.player}> guessed correctly!`
+                            }, () => {
+                                this.finishRound();
+                            });
                         });
-                    });
-                } else {
+                      } else {
+			var message = `Sorry, but **${guess}** isn't the word I'm looking for.\r\n\r\n`;
+
+			for (var i = 0, len = this.currentRound.word.length; i < len; i++) {
+				if (this.currentRound.word[i] == guess[i]) {
+					message += `:regional_indicator_${this.currentRound.word[i]}: `;
+				}
+				else {
+					message += `:no_entry_sign: `;
+				}
+			}
                     this.helpers.respond({
-                        "content": "Sorry, but that isn't the word I'm looking for.",
-                        "flags": 64
+                        "content": message
                     });
                 }
+		    });
             }
         } else {
             this.helpers.respond({
-                "content": "You aren't signed up for this game.",
-                "flags": 64
+                "content": "You aren't signed up for this game."
             });
         }
     }
@@ -111,20 +124,23 @@ class Game extends BaseGame {
         if (this.gameStarted() && this.playerJoined()) {
             if (this.currentRound.players[this.player]) {
                 this.helpers.respond({
-                    "content": this.currentRound.players[this.player] == 'x' ? "You already passed this round!" : "You already guessed correctly this round!",
-                    "flags": 64
+                    "content": this.currentRound.players[this.player] == 'x' ? "You already passed this round!" : "You already guessed correctly this round!"
                 });
             } else {
+		    this.helpers.respond({
+			    "content" : "Passing..."
+		    }, () => {
                 this.helpers.saveData([{
                     key: this.playerEntity[this.db.KEY],
                     data: this.playerEntity
                 }], () => {
-                    this.helpers.respond({
+                    this.helpers.sendMessage({
                         "content": `<@${this.player}> has passed!`
                     }, () => {
                         this.finishRound();
                     });
                 });
+		    });
             }
         }
     }
@@ -137,39 +153,39 @@ class Game extends BaseGame {
                     key: this.entity[this.db.KEY],
                     data: this.entity
                 }], () => {
-			var message = ":confetti_ball: The final scores are...\r\n\r\n";
+                    var message = ":confetti_ball: The final scores are...\r\n\r\n";
 
-            const query = this.db.createQuery('Player').filter('game', '=', this.entity[this.db.KEY].id);
+                    const query = this.db.createQuery('Player').filter('game', '=', this.entity[this.db.KEY].id);
 
-            this.db.runQuery(query, (err, entities, info) => {
-		    var scores = {};
-		    var ranking = [];
+                    this.db.runQuery(query, (err, entities, info) => {
+                        var scores = {};
+                        var ranking = [];
 
-                entities.forEach((entity) => {
-			scores[entity.player] = 0;
+                        entities.forEach((entity) => {
+                            scores[entity.player] = 0;
 
-			for (var i = 0, len = this.entity.rounds.length; i < len; i++) {
-                    if (entity[`round_${i}`] && entity[`round_${i}`] != 'x') {
-			    scores[entity.player]++;
-                    }
-			}
-			});
+                            for (var i = 0, len = this.entity.rounds.length; i < len; i++) {
+                                if (entity[`round_${i}`] && entity[`round_${i}`] != 'x') {
+                                    scores[entity.player]++;
+                                }
+                            }
+                        });
 
-		    this.entity.players.sort((a, b) => {
-			    return scores[a] - scores[b];
-		    });
+                        this.entity.players.sort((a, b) => {
+                            return scores[a] - scores[b];
+                        });
 
-		    this.entity.players.forEach( (player) => {
-			    message += `<@${player}> - ${scores[player]}/5 correct\r\n`;
-		    });
+                        this.entity.players.forEach((player) => {
+                            message += `<@${player}> - ${scores[player]}/5 correct\r\n`;
+                        });
 
-                    this.helpers.sendMessage({
-                        "content": message
+                        this.helpers.sendMessage({
+                            "content": message
+                        });
                     });
                 });
-		});
             } else {
-                    this.startRound();
+                this.startRound();
             }
         } else {
             this.helpers.end();

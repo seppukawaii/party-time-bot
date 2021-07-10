@@ -27,39 +27,40 @@ module.exports = function(req, res) {
             )
             .catch((err) => {
                 this.errorHandler(err);
-	    })
-	    .finally( () => {
-		    if (callback) {
-			    callback();
-		    }
-		    else {
-			    res.end();
-		    }
-	    });
+            })
+            .finally(() => {
+                if (callback) {
+                    callback();
+                } else {
+                    res.end();
+                }
+            });
     };
 
-	this.sendMessage = function (content, callback) {
-		return axios.post(
-			`https://discord.com/api/v8/webhooks/${process.env.APPLICATION_ID}/${this.interaction.token}`,
-			content,
-			headers
-		)
-		.catch((err) => {
-			this.errorHandler(err);
-		})
-		.finally( () => {
-			if (callback) {
-				callback();
-			}
-			else {
-				res.end();
-			}
-		});
-	};
+    this.sendMessage = function(content, callback) {
+        if (!content.flags) {
+            content.flags = null;
+        }
+        return axios.post(
+                `https://discord.com/api/v8/webhooks/${process.env.APPLICATION_ID}/${this.interaction.token}`,
+                content,
+                headers
+            )
+            .catch((err) => {
+                this.errorHandler(err);
+            })
+            .finally(() => {
+                if (callback) {
+                    callback();
+                } else {
+                    res.end();
+                }
+            });
+    };
 
-	this.end = function () {
-		res.end();
-	}
+    this.end = function() {
+        res.end();
+    }
 
     this.errorHandler = function(err) {
         axios.post(
@@ -72,9 +73,9 @@ module.exports = function(req, res) {
             .catch((err) => {
                 console.log(err.toString());
             })
-	    .finally( () => {
-		    res.end();
-	    });
+            .finally(() => {
+                res.end();
+            });
     }
 
     this.saveData = function(entities, callback) {
