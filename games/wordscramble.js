@@ -1,14 +1,45 @@
 var BaseGame = require('./_base');
 
 class Game extends BaseGame {
-    startGame() {
-        this.entity.rounds = [];
 
-	    this.helpers.respond({
-		    "content" : "The game is now starting!  There will be five rounds of escalating difficulty (currently this is a lie).  Use **/guess (answer)** to submit your best guess!"
-	    }, () => {
-              this.startRound();
-	    });
+    init(callback) {
+        if (this.entity.rounds) {
+            const query = this.db.createQuery('Player').filter('game', '=', this.entity[this.db.KEY].id);
+
+            this.db.runQuery(query, (err, entities, info) => {
+                var round = this.entity.rounds.length - 1;
+                this.currentRound = {
+                    num: round,
+                    word: this.entity.rounds[round].word,
+                    scrambled: this.entity.rounds[round].scrambled,
+                    players: {}
+                };
+
+                entities.forEach((entity) => {
+                    if (entity[`round_${round}`]) {
+                        this.currentRound.players[entity.player] = entity[`round_${round}`];
+                    }
+
+                    if (entity.player == this.player) {
+                        this.playerEntity = entity;
+                    }
+                });
+
+                callback();
+            });
+        } else {
+            this.entity.rounds = [];
+            callback();
+        }
+
+    }
+
+    startGame() {
+        this.helpers.respond({
+            "content": "The game is now starting!  There will be five rounds of escalating difficulty (currently this is a lie).  Use **/guess (answer)** to submit your best guess, or **/pass** if you give up!!"
+        }, () => {
+            this.startRound();
+        });
     }
 
     startRound() {
@@ -19,70 +50,55 @@ class Game extends BaseGame {
         }).join('');
         this.entity.rounds.push({
             "word": word,
-            "scrambled": scrambledWord
+            "scrambled": scrambledWord,
+		"start" : new Date().toISOString()
         });
 
         this.helpers.saveData([{
             key: this.entity[this.db.KEY],
             data: this.entity
         }], () => {
+		var message = "";
+
+		if (this.entity.rounds.length > 1) {
+			var message = `The answer I wanted was: **${this.currentRound.word}**\r\n\r\n`;
+		}
+
+		message += `Round #${this.entity.rounds.length} : **${scrambledWord}**`;
+
             this.helpers.sendMessage({
-                "content": `Round #${this.entity.rounds.length} : ${scrambledWord}`
+                "content": message
             });
         });
     }
 
     guess() {
-        if (this.entity.players.includes(this.player)) {
-            const query = this.db.createQuery('Player').filter('game', '=', this.entity[this.db.KEY].id);
-
-            this.db.runQuery(query, (err, entities, info) => {
-                var round = this.entity.rounds.length - 1;
-                var playerRounds = {};
-                var playerEntity = {
-                    rounds: []
-                };
-                entities.forEach((entity) => {
-                    if (entity[`round_${round}`]) {
-                        playerRounds[entity.player] = entity[`round_${round}`];
-                    }
-                    if (entity.player == this.player) {
-                        playerEntity = entity;
-                    }
+        if (this.gameStarted() && this.playerJoined()) {
+            if (this.currentRound.players[this.player]) {
+                this.helpers.respond({
+                    "content": this.currentRound.players[this.player] == 'x' ? "You already passed this round!" : "You already guessed correctly this round!",
+                    "flags": 64
                 });
-
-                if (playerRounds[this.player]) {
-                    this.helpers.respond({
-                        "content": "You already guessed correctly this round!",
-                        "flags": 64
+            } else {
+                if (this.options.guess.toLowerCase().trim() == this.currentRound.word) {
+                    this.playerEntity[`round_${this.currentRound.num}`] = new Date().toISOString();
+                    this.helpers.saveData([{
+                        key: this.playerEntity[this.db.KEY],
+                        data: this.playerEntity
+                    }], () => {
+                        this.helpers.respond({
+                            "content": `<@${this.player}> guessed correctly!`
+                        }, () => {
+                            this.finishRound();
+                        });
                     });
                 } else {
-                    if (!playerEntity[`round_${round}`]) {
-                        playerEntity[`round_${round}`] = [];
-                    }
-                    playerEntity[`round_${round}`].push(this.options.guess.toLowerCase());
-                    if (this.options.guess.toLowerCase().trim() == this.entity.rounds[round].word) {
-                        this.helpers.saveData([{
-                            key: playerEntity[this.db.KEY],
-                            data: playerEntity
-                        }], () => {
-                            this.helpers.respond({
-                                "content": `<@${this.player}> guessed correctly!`
-                            }, () => {
-				    console.log(Object.keys(playerRounds).length + 1, this.entity.players.length);
-                                if (Object.keys(playerRounds).length + 1 == this.entity.players.length) {
-                                    this.finishRound();
-                                }
-                            });
-                        });
-                    } else {
-                        this.helpers.respond({
-                            "content": "Sorry, but that isn't the word I'm looking for.",
-                            "flags": 64
-                        });
-                    }
+                    this.helpers.respond({
+                        "content": "Sorry, but that isn't the word I'm looking for.",
+                        "flags": 64
+                    });
                 }
-            });
+            }
         } else {
             this.helpers.respond({
                 "content": "You aren't signed up for this game.",
@@ -91,19 +107,72 @@ class Game extends BaseGame {
         }
     }
 
-    finishRound() {
-        if (this.entity.rounds.length >= 5) {
-            this.entity.state = 'done';
-            this.helpers.saveData([{
-                key: this.entity[this.db.KEY],
-                data: this.entity
-            }], () => {
-                this.helpers.sendMessage({
-                    "content": "Game over!"
+    pass() {
+        if (this.gameStarted() && this.playerJoined()) {
+            if (this.currentRound.players[this.player]) {
+                this.helpers.respond({
+                    "content": this.currentRound.players[this.player] == 'x' ? "You already passed this round!" : "You already guessed correctly this round!",
+                    "flags": 64
                 });
-            });
+            } else {
+                this.helpers.saveData([{
+                    key: this.playerEntity[this.db.KEY],
+                    data: this.playerEntity
+                }], () => {
+                    this.helpers.respond({
+                        "content": `<@${this.player}> has passed!`
+                    }, () => {
+                        this.finishRound();
+                    });
+                });
+            }
+        }
+    }
+
+    finishRound() {
+        if (Object.keys(this.currentRound.players).length + 1 == this.entity.players.length) {
+            if (this.entity.rounds.length >= 5) {
+                this.entity.state = 'done';
+                this.helpers.saveData([{
+                    key: this.entity[this.db.KEY],
+                    data: this.entity
+                }], () => {
+			var message = ":confetti_ball: The final scores are...\r\n\r\n";
+
+            const query = this.db.createQuery('Player').filter('game', '=', this.entity[this.db.KEY].id);
+
+            this.db.runQuery(query, (err, entities, info) => {
+		    var scores = {};
+		    var ranking = [];
+
+                entities.forEach((entity) => {
+			scores[entity.player] = 0;
+
+			for (var i = 0, len = this.entity.rounds.length; i < len; i++) {
+                    if (entity[`round_${i}`] && entity[`round_${i}`] != 'x') {
+			    scores[entity.player]++;
+                    }
+			}
+			});
+
+		    this.entity.players.sort((a, b) => {
+			    return scores[a] - scores[b];
+		    });
+
+		    this.entity.players.forEach( (player) => {
+			    message += `<@${player}> - ${scores[player]}/5 correct\r\n`;
+		    });
+
+                    this.helpers.sendMessage({
+                        "content": message
+                    });
+                });
+		});
+            } else {
+                    this.startRound();
+            }
         } else {
-            this.startRound();
+            this.helpers.end();
         }
     }
 }

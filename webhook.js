@@ -48,6 +48,24 @@ const commands = [{
 				"required" : true
 			}
 		]
+	},
+	{
+		"name" : "play",
+		"description" : "Play a card, action, or whatever is relevant to the current game!",
+		"options" : [{
+			"name" : "what",
+			"description" : "What are you playing?",
+			"type" : 3,
+			"required" : true
+		}, {
+			"name" : "target",
+			"description" : "Pick a target (if applicable)",
+			"type" : 3
+		}]
+	},
+	{
+		"name" : "pass",
+		"description" : "Pass this turn."
 	}
 ];
 

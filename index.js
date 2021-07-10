@@ -74,7 +74,7 @@ exports.partytime = (req, res) => {
                     fs.access(`./functions/${req.body.data.name}.js`, fs.constants.R_OK, (err) => {
                         if (err) {
                             var Game = require('./games/_base');
-                            new Game(req.body, res);
+                            new Game(req, res);
                         } else {
                             require(`./functions/${req.body.data.name}`).interaction(req, res);
                         }

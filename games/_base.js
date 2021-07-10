@@ -14,9 +14,9 @@ class BaseGame {
 
     constructor(req, res) {
         this.helpers = require('../helpers')(req, res);
-        this.channel = req.channel_id;
-        this.player = req.member.user.id.toString();
-        this.options = req.data.options;
+        this.channel = req.body.channel_id;
+        this.player = req.body.member.user.id.toString();
+        this.options = req.body.data.options;
 
         if (this.constructor.name == 'BaseGame') {
             const query = this.db.createQuery('Game').filter('channel', '=', this.channel).order('createdAt', {
@@ -25,19 +25,25 @@ class BaseGame {
 
             this.db.runQuery(query, (err, entities, info) => {
                 if (err || entities.length == 0 || entities[0].state == 'done') {
-                    this[req.data.name]();
+                    this[req.body.data.name]();
                 } else {
-                    req.entity = entities[0];
+                    req.body.entity = entities[0];
 
-                    var ActiveGame = require(`./${req.entity.game}`);
+                    var ActiveGame = require(`./${req.body.entity.game}`);
                     new ActiveGame(req, res);
                 }
             });
         } else {
-            this.entity = req.entity;
-            this[req.data.name]();
+            this.entity = req.body.entity;
+		this.init( () => {
+	            this[req.body.data.name]();
+		});
         }
     }
+
+	init (callback) {
+		callback();
+	}
 
     setup() {
         if (this.constructor.name == 'BaseGame') {
@@ -72,6 +78,18 @@ class BaseGame {
                 "content": "There is already a game running.",
                 "flags": 64
             });
+        }
+    }
+
+    gameStarted() {
+        if (this.entity.state == 'active') {
+            return true;
+        } else {
+            this.helpers.respond({
+                "content": "The game hasn't started yet. Maybe you want to **/start** it?"
+            });
+
+            return false;
         }
     }
 
@@ -112,7 +130,20 @@ class BaseGame {
         }
     }
 
+	playerJoined () {
+		if (this.entity.players.includes(this.player)) {
+			return true;
+		}
+		else {
+			this.helpers.respond({
+				"content" : "You aren't signed up for this game."
+			});
+			return false;
+		}
+	}
+
     start() {
+	    console.log('start');
         if (this.entity.state == 'active') {
             this.helpers.respond({
                 "content": "The game has already started.",

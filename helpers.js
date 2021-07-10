@@ -9,10 +9,10 @@ const headers = {
     }
 };
 
-module.exports = function(data, res) {
+module.exports = function(req, res) {
     this.interaction = {
-        id: data.id,
-        token: data.token
+        id: req.body.id,
+        token: req.body.token
     };
 
     this.db = new Datastore({
@@ -56,6 +56,10 @@ module.exports = function(data, res) {
 			}
 		});
 	};
+
+	this.end = function () {
+		res.end();
+	}
 
     this.errorHandler = function(err) {
         axios.post(
