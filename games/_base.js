@@ -193,6 +193,10 @@ class BaseGame {
                 play() {
                     console.log("not a valid action");
                 }
+
+		check () {
+			console.log("not a valid action");
+		}
             }
 
             module.exports = BaseGame;

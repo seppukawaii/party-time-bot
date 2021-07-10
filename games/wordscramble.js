@@ -3,7 +3,7 @@ var BaseGame = require('./_base');
 class Game extends BaseGame {
 
     init(callback) {
-        if (this.entity.rounds) {
+        if (this.entity.rounds.length > 0) {
             const query = this.db.createQuery('Player').filter('game', '=', this.entity[this.db.KEY].id);
 
             this.db.runQuery(query, (err, entities, info) => {
@@ -81,7 +81,7 @@ class Game extends BaseGame {
             } else {
 		var guess = this.options.guess.toLowerCase().trim();
 		    this.helpers.respond({
-			    "content" : `Submitting **${quess}**...`
+			    "content" : `Submitting **${guess}**...`
 		    }, () => {
                       if (guess == this.currentRound.word) {
                         this.playerEntity[`round_${this.currentRound.num}`] = new Date().toISOString();
@@ -144,6 +144,18 @@ class Game extends BaseGame {
             }
         }
     }
+
+	check () {
+		if (this.gameStarted()) {
+			var message = ":regional_indicator_w: :regional_indicator_o: :regional_indicator_r: :regional_indicator_d:   :regional_indicator_s: :regional_indicator_c: :regional_indicator_r: :regional_indicator_a: :regional_indicator_m: :regional_indicator_b: :regional_indicator_l: :regional_indicator_e:\r\n\r\n";
+			message += "Current Players:\r\n";
+			for (var i = 0, len = this.entity.players.length; i < len; i++) {
+				message += `<@${this.entity.players[i]}>\r\n`;
+			}
+			message += `\r\nCurrent Round: #${this.currentRound.num}\r\n`;
+			message += `\r\nCurrent Word: **${this.currentRound.scrambled}`;
+		}
+	}
 
     finishRound() {
         if (Object.keys(this.currentRound.players).length + 1 == this.entity.players.length) {
